@@ -1,13 +1,15 @@
 import os
 import argparse
+import numpy as np
 from utils.train_util import ClassicTrainer, ADGTrainer
 from utils.data_util import dataset, dataset_CADG
+import pickle
 
-N_CELL_TYPES = {'scquery':39, 'pbmc':10, 'pancreas1': 13, 'pancreas2': 13, 'pancreas3': 13, 
-                'pancreas4': 13, 'pancreas5': 13, 'pancreas6': 13,}
+N_CELL_TYPES = {'scquery':39, 'pbmc':10,  'pancreas0': 13, 'pancreas1': 13, 'pancreas2': 13, 'pancreas3': 13, 
+                'pancreas4': 13, 'pancreas5': 13}
 
-N_GENES = {'scquery':20499, 'pbmc':3000, 'pancreas1': 3000, 'pancreas2': 3000, 'pancreas3': 3000, 
-                'pancreas4': 3000, 'pancreas5': 3000, 'pancreas6': 3000,}
+N_GENES = {'scquery':20499, 'pbmc':3000, 'pancreas0': 3000,  'pancreas1': 3000, 'pancreas2': 3000, 'pancreas3': 3000, 
+                'pancreas4': 3000, 'pancreas5': 3000}
 
 def train(args, dim_i, dim_o, data_path):
     model_path = os.path.join(args.ckpts, args.output)
@@ -16,18 +18,39 @@ def train(args, dim_i, dim_o, data_path):
     if args.adv_flag:
         dataloader = dataset_CADG(data_path, args.batch_size, label_size=dim_o, dataset_name=args.dataset, validation=args.dataset)
         trainer = ADGTrainer(dim_i, args.margin, args.lamb, args.dim1, args.dim2, dim_o, args.dimd, args.epochs, 
-                        args.batch_size, model_path, use_gpu=args.use_gpu, validation=args.validation)
+                        args.batch_size, model_path, use_gpu=args.use_gpu, validation=args.validation, save_mod = args.save_mod)
         log_file = '%s_scDGN_margin%.2f_lambda%.2f_%s.txt'%(args.dataset, args.margin, args.lamb, args.output)
     else:
         dataloader = dataset(data_path, args.batch_size, label_size=dim_o, dataset_name=args.dataset, validation=args.dataset)
         trainer = ClassicTrainer(dim_i, args.dim1, args.dim2, dim_o, args.epochs, args.batch_size, 
-                            model_path, use_gpu=args.use_gpu, validation=args.validation)
+                            model_path, use_gpu=args.use_gpu, validation=args.validation, save_mod = args.save_mod)
         log_file = '%s_NN_%s.txt'%(args.dataset, args.output)
     
     trainer.dataset = dataloader
     with open(os.path.join(args.ckpts, args.output, log_file), 'w') as fw:
         fw.write(str(args)+'\n')
         trainer.train(fw)
+    if(args.validation):
+        return trainer.best_valid_acc
+
+def valid_scdgn(lambdas, margin, args, n_genes, n_labels):
+    valid_acc = dict()
+    out_file = os.path.join(args.ckpts, args.output, "valid_acc.pi")
+    if(os.path.exists(out_file)):
+        with open(out_file, "rb") as f:
+            valid_acc = pickle.load(f)
+    
+
+    for l in lambdas:
+        if not l in valid_acc.keys():
+            valid_acc[l] = {}
+        for m in margin:
+            args.lamb = l
+            args.margin = m
+            valid_acc[l][m]=train(args, n_genes, n_labels, args.inp_folder)
+        with open(out_file, "wb") as f:
+            pickle.dump(valid_acc, f)
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -43,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", type=str, default='scquery', help='Save model filepath')
     parser.add_argument('-e', '--epochs', type=int, default=250, help='number of epochs to train')
     parser.add_argument('-b', '--batch_size', type=int, default=256, help='batch size')
+    parser.add_argument('-i', '--inp_folder', type=str, default="scDGN", help='Input folder to take data from')
     parser.add_argument('--save_model', type=int, default=1, help='save the trained model?')
     
     parser.add_argument('-adv', '--adv_flag', type=int, default=1, help='conditional domain adversarial training')
@@ -50,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--margin', type=float, default=1.0, help='margin of contrastive loss')
     parser.add_argument('--use_gpu', type=int, default=1, help='use gpu to train the model')
     parser.add_argument('-g', '--gpu_id', type=str, default='0', help='gpuid used for training')
+    parser.add_argument('-s', '--save_mod', type=int, default=1, help='saving model or not')
 
     args = parser.parse_args()
 
@@ -64,6 +89,10 @@ if __name__ == "__main__":
 
     n_labels = N_CELL_TYPES[args.dataset]
     n_genes = N_GENES[args.dataset]
-    data_path = 'data/'
-    train(args, n_genes, n_labels, data_path)
+    data_path = os.path.join('data_shuff',args.inp_folder)
+    #args.epochs = 100
+    if(args.validation == 1 and args.adv_flag):
+        valid_scdgn(np.arange(0.05, 1.00, 0.05), np.arange(1,10,1), args, n_genes, n_labels)
+    else:
+        train(args, n_genes, n_labels, args.inp_folder)
     

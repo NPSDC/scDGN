@@ -43,7 +43,8 @@ class dataset(object):
         elif self.validation: # randomly extract 20% of training set as validation set
             self.n_sample = int(self.train_set['features'].shape[0])
             self.n_valid = int(0.2*self.n_sample )
-            self.perm = np.random.permutation(self.n_sample)
+            #self.perm = np.random.permutation(self.n_sample)
+            self.perm = list(range(self.n_sample))
             self._all_X = self.train_set['features']
             self._all_y = self.train_set['labels']
             self._all_acc = np.array([self.accessions_set.index(item) for item in list(self.train_set['accessions'])])
