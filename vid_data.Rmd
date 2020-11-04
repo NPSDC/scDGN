@@ -1,0 +1,53 @@
+---
+title: "Markdown"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("vis_helper.R")
+library(reticulate)
+np <- import("numpy")
+```
+
+###Original Data
+```{r}
+dir <- "data_shuff/scDGN/"
+files <- list.files(dir)
+filesPath = paste(dir, files, sep="/")
+
+for(i in seq_along(files))
+{
+    data <- np$load(filesPath[i])
+    print(files[i])
+    print("PCA")
+    pPCA <- createPlot(data[["features"]], data[["labels"]], data[["accessions"]], "pca")
+    print(pPCA)
+    print("UMAP")
+    pUMAP <- createPlot(data[["features"]], data[["labels"]], data[["accessions"]], "umap")
+    print(pUMAP)
+}
+```
+
+###ADAE_50
+```{r}
+# dir <- "data_shuff/ADAE_50/"
+# files <- list.files(dir)
+# filesPath = paste(dir, files, sep="/")
+# 
+# for(i in seq_along(files))
+# {
+#     data <- np$load(filesPath[i])
+#     print(files[i])
+#     print("PCA")
+#     pPCA <- createPlot(data[["features"]], data[["labels"]], data[["accessions"]], "pca")
+#     print("UMAP")
+#     pUMAP <- createPlot(data[["features"]], data[["labels"]], data[["accessions"]], "umap")
+# }
+```
+
