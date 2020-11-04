@@ -3,6 +3,7 @@ import sklearn
 import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import torch
 from torch.autograd import Variable
 from utils.vis_util import extract_rep
 from utils.train_util import ClassicTrainer, ADGTrainer
@@ -84,7 +85,7 @@ def ret_test_acc(dir, end = -2):
     return acc
 
 def gen_npz(data_dir, mod_dir, inp_dim = 3000, batch_size = 256, validation = False, dim1 = 1136, 
-dim2 = 100, dom_dim = 64, n_epoch = 250):
+dim2 = 100, dom_dim = 64, n_epoch = 250, csv = True):
     acc = {"pancreas0":0, "pancreas1":0, "pancreas2":0, "pancreas3":0, "pancreas4":0, "pancreas5":0, "pbmc":0}
     pan_dirs = sorted(os.listdir(mod_dir))
     pan_dirs = [pan for pan in pan_dirs if pan.startswith("pbmc") or pan.startswith("pancreas")]
@@ -118,4 +119,13 @@ dim2 = 100, dom_dim = 64, n_epoch = 250):
             df["labels"] = labels
             df["domains"] = domains
             
-            np.savez(os.path.join(mod_dir, d, acc_keys[i] + ".npz"), **df)
+            np.savez(os.path.join(mod_dir, d, acc_keys[i] + "_red.npz"), **df)
+            if(csv):
+                np.savetxt(os.path.join(mod_dir, d, acc_keys[i] + "_red_fea.csv"), df["features"])
+                np.savetxt(os.path.join(mod_dir, d, acc_keys[i] + "_labels.csv"), df["labels"])
+                np.savetxt(os.path.join(mod_dir, d, acc_keys[i] + "_batch.csv"), df["domains"])
+                X = np.concatenate((data.train_set["features"], data.test_set["features"]))
+                np.savetxt(os.path.join(data_dir, acc_keys[i] + "_fea.csv"), X)
+                np.savetxt(os.path.join(data_dir, acc_keys[i] + "_labels.csv"), df["labels"])
+                np.savetxt(os.path.join(data_dir, acc_keys[i] + "_batch.csv"), df["domains"])
+                

@@ -2,6 +2,7 @@ library(Rtsne)
 library(umap)
 library(ggpubr)
 
+
 createPlot <- function(data, labels = NULL, batch = NULL, type ="PCA")
 {
     if(!is.null(labels))

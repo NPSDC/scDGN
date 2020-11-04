@@ -25,7 +25,7 @@ class ClassicNN(nn.Module):
         h1_output = self.h1(x)
         h2_output = self.h2(h1_output)
         class_output = self.o(h2_output)
-        if mode ==  'train' or 'test':
+        if mode == 'train' or mode == 'test':
             return class_output
         elif mode == 'eval':
             return h2_output
