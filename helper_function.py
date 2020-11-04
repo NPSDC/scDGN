@@ -3,6 +3,10 @@ import sklearn
 import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from torch.autograd import Variable
+from utils.vis_util import extract_rep
+from utils.train_util import ClassicTrainer, ADGTrainer
+from utils.data_util import dataset, dataset_CADG
 
 def savenp(inp_file, out_dir):
     pass
@@ -33,7 +37,7 @@ def table(v1, v2 = None):
 def createDf(npOb):
     labs = npOb["labels"]
     accs = npOb["accessions"]
-    df = pd.DataFrame({"labs":npOb["labels"], "accs":npOb["accessions"])
+    df = pd.DataFrame({"labs":npOb["labels"], "accs":npOb["accessions"]})
     return df
 
 def get_best_mod(pi_file):
@@ -79,4 +83,39 @@ def ret_test_acc(dir, end = -2):
             print("not key")
     return acc
 
-    
+def gen_npz(data_dir, mod_dir, inp_dim = 3000, batch_size = 256, validation = False, dim1 = 1136, 
+dim2 = 100, dom_dim = 64, n_epoch = 250):
+    acc = {"pancreas0":0, "pancreas1":0, "pancreas2":0, "pancreas3":0, "pancreas4":0, "pancreas5":0, "pbmc":0}
+    pan_dirs = sorted(os.listdir(mod_dir))
+    pan_dirs = [pan for pan in pan_dirs if pan.startswith("pbmc") or pan.startswith("pancreas")]
+    acc_keys = list(acc.keys())
+
+    for i in range(len(pan_dirs)):
+        d = pan_dirs[i]
+        if acc_keys[i] in d:
+            df_dir = os.path.join(mod_dir, d)
+            files = os.listdir(df_dir)
+            files = [f for f in files if f.startswith("best_model")]
+            mod_path = os.path.join(mod_dir, pan_dirs[i])
+            label_size=13
+            if("pbmc" in acc_keys[i]):
+                label_size = 10
+            if("scDGN" in mod_dir):
+                data = dataset_CADG(data_dir, batch_size, label_size = label_size, dataset_name = acc_keys[i], validation = validation)
+                t = ADGTrainer(inp_dim, 1, 1, dim1, dim2, label_size, dom_dim, n_epoch, batch_size, mod_path, validation=validation)
+            else:
+                data = dataset(data_dir, batch_size, label_size = label_size, dataset_name = acc_keys[i], validation = validation)
+                t = ClassicTrainer(inp_dim, dim1, dim2, label_size, n_epoch, batch_size, mod_path, validation=validation, use_gpu=1)
+                
+            t.dataset = data
+            t.load_model(os.path.join(mod_path, files[0]))
+            if("scDGN" in mod_dir):
+                representations, labels, domains = extract_rep(t, data, type="concat", method = "scDGN")
+            else:
+                representations, labels, domains = extract_rep(t, data, type="concat", method = "NN")
+            df = {}
+            df["features"] = representations
+            df["labels"] = labels
+            df["domains"] = domains
+            
+            np.savez(os.path.join(mod_dir, d, acc_keys[i] + ".npz"), **df)

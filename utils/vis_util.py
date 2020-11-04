@@ -86,7 +86,7 @@ def plot_pca(representations, labels, domains, modelname, expname='scquery', nla
 
 # extract the representations from NN
 ## type in ["test", "train", "valid", "all"]
-def extract_rep(t, d, type = "train"):
+def extract_rep(t, d, type = "train", method = "NN"):
     representations = None
     labels = None
     domains = None
@@ -110,8 +110,8 @@ def extract_rep(t, d, type = "train"):
         Z = test_set["accessions"]
     else:
         X = np.concatenate((tr_set["features"], test_set["features"]))
-        Y = np.concatenate((tr_set["features"], test_set["features"]))
-        Z = Y = np.concatenate((tr_set["accessions"], test_set["accessions"]))
+        Y = np.concatenate((tr_set["labels"], test_set["labels"]))
+        Z = np.concatenate((tr_set["accessions"], test_set["accessions"]))
     
     assert(Z.shape[0] == Y.shape[0])
     assert(X.shape[0] == Y.shape[0])
@@ -121,8 +121,11 @@ def extract_rep(t, d, type = "train"):
         y = Y[i*batch_size:(i+1)*batch_size]
         x = Variable(torch.cuda.FloatTensor(x))
         
-        z = Z [i*batch_size:(i+1)*batch_size]
-        f_X = t.D(x, x, mode='eval')
+        z = Z[i*batch_size:(i+1)*batch_size]
+        if(method == "NN"):
+            f_X = t.D(x, mode='eval')
+        else:
+            f_X = t.D(x, x, mode='eval')
         
         if representations is None:
             representations = f_X.cpu().data.numpy()
@@ -139,7 +142,10 @@ def extract_rep(t, d, type = "train"):
     x = Variable(torch.cuda.FloatTensor(x))
     
     z = Z[(i+1)*batch_size:]
-    f_X = t.D(x, x, mode='eval')
+    if(method == "NN"):
+        f_X = t.D(x, mode='eval')
+    else:
+        f_X = t.D(x, x, mode='eval')
     
     representations = np.concatenate((representations, f_X.cpu().data.numpy()), 0)
     labels = np.concatenate((labels, y), 0)
