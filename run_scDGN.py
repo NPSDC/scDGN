@@ -25,8 +25,8 @@ def train(args, dim_i, dim_o, data_path):
         trainer = ClassicTrainer(dim_i, args.dim1, args.dim2, dim_o, args.epochs, args.batch_size, 
                             model_path, use_gpu=args.use_gpu, validation=args.validation, save_mod = args.save_mod)
         log_file = '%s_NN_%s.txt'%(args.dataset, args.output)
-    
     trainer.dataset = dataloader
+    
     with open(os.path.join(args.ckpts, args.output, log_file), 'w') as fw:
         fw.write(str(args)+'\n')
         trainer.train(fw)
@@ -59,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument('-d1', '--dim1', type=int, default=1136, help='number of hidden units in layer1')
     parser.add_argument('-d2', '--dim2', type=int, default=100, help='number of hidden units in layer2')
     parser.add_argument('-dd', '--dimd', type=int, default=64, help='number of hidden units in domain discriminator')
+    parser.add_argument('-ng', '--ngenes', type=int, default=3000, help='number of genes in the input')
 
     parser.add_argument("-dn", "--dataset", type=str, default='scquery', help='name of dataset')
     parser.add_argument('--validation', type=int, default=1, help='using validation set or not')
@@ -75,6 +76,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_gpu', type=int, default=1, help='use gpu to train the model')
     parser.add_argument('-g', '--gpu_id', type=str, default='0', help='gpuid used for training')
     parser.add_argument('-s', '--save_mod', type=int, default=1, help='saving model or not')
+    parser.add_argument('-v', '--run_val', type=int, default=0, help='Run validation for hyperparameter tuning or not')
 
     args = parser.parse_args()
 
@@ -89,10 +91,13 @@ if __name__ == "__main__":
 
     n_labels = N_CELL_TYPES[args.dataset]
     n_genes = N_GENES[args.dataset]
+    if(args.ngenes != 3000):
+        n_genes = args.ngenes
     data_path = os.path.join('data_shuff',args.inp_folder)
     #args.epochs = 100
-    if(args.validation == 1 and args.adv_flag):
-        valid_scdgn(np.arange(0.05, 1.00, 0.05), np.arange(1,10,1), args, n_genes, n_labels)
+    if args.run_val == 1: 
+        if args.adv_flag == 1:
+            valid_scdgn(np.arange(0.50, 1.05, 0.05), np.arange(1,10,1), args, n_genes, n_labels)
     else:
         train(args, n_genes, n_labels, args.inp_folder)
     

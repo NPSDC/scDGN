@@ -78,6 +78,7 @@ class BaseTrainer(object):
 
 class ClassicTrainer(BaseTrainer):
     def __init__(self, d_dim, dim1, dim2, dim_label, num_epochs, batch_size, model_path, use_gpu, validation=True, save_mod=True):
+        print(d_dim)
         super(ClassicTrainer, self).__init__(d_dim, dim1, dim2, dim_label, num_epochs, batch_size, model_path, use_gpu, validation, save_mod)
         if self.use_gpu:
             self.D = ClassicNN(self.d_dim, self.dim1, self.dim2, self.dim_label).cuda()
@@ -98,6 +99,7 @@ class ClassicTrainer(BaseTrainer):
         for j in range(self.num_epochs):
             begin = time.time()
             counts = 0
+            val_counts = 0
             sum_acc = 0.0
             valid_sum_acc = 0.0
             train_epoch_loss = []
@@ -106,6 +108,7 @@ class ClassicTrainer(BaseTrainer):
             for x, y, self.x_valid, y_valid in train_data:
                 # forward calculation and back propagation
                 counts += len(y)
+                val_counts += len(y_valid)
                 if self.use_gpu:
                     X = Variable(torch.cuda.FloatTensor(x))
                     Y = Variable(torch.cuda.LongTensor(y))
@@ -140,7 +143,7 @@ class ClassicTrainer(BaseTrainer):
             self.train_acc = sum_acc/counts
             self.train_loss.append(np.sum(train_epoch_loss)/(counts/self.batch_size))
             if self.validation:
-                valid_acc = valid_sum_acc/counts
+                valid_acc = valid_sum_acc/val_counts
                 self.valid_accs.append(valid_acc)
                 f.write("Epoch %d, time = %ds, train accuracy = %.4f, loss = %.4f, validation accuracy = %.4f\n" % (
                         j, time.time() - begin, self.train_acc, self.train_loss[-1], valid_acc))
@@ -156,6 +159,7 @@ class ClassicTrainer(BaseTrainer):
             if j%10==9:
                 tqdm.write('After epoch {0} Train Accuracy: {1:0.3f} '.format(j+1, self.train_acc))
         if self.validation:
+            self.best_valid_acc = best_validate_acc
             f.write("Best Validated Model Prediction  and validation Accuracy = %.4f, %.4f\n" % (score, best_validate_acc))
         f.write('After Training, Test Accuracy: {:0.3f}\n'.format(self.test()))
         if(self.save_mod):
@@ -252,7 +256,7 @@ class ADGTrainer(BaseTrainer):
         if self.validation:
            
             self.best_valid_acc=best_validate_acc
-            f.write("Best Validated Model Prediction test and validation Accuracy = %.4f,%.4f\n" % (score, best_validate_acc))
+            f.write("Best Validated Model Prediction test and validation Accuracy = %.4f, %.4f\n" % (score, best_validate_acc))
         f.write('After Training, Test Accuracy: {:0.3f}\n'.format(self.test()))
         if(self.save_mod):    
             self.save_model(os.path.join(self.out_path, 'final_model_%.4f_%.4f.ckpt'%(self.margin, self.lamb)))

@@ -1,12 +1,29 @@
-python run_scDGN.py -dn pancreas1 -l 0.1 -m 1 -g 0 -adv 0 -o pancreas1_test_NN_1 --validation 0
+#!/bin/bash
+#SBATCH -J run_scdgn # Job name
+#SBATCH --mail-user=npsingh@umd.edu # Email for job info
+#SBATCH --mail-type=fail,end# Get email for begin, end, and fail
+#SBATCH --time=0-4:00:00
+#SBATCH --partition=class
+#SBATCH --account=class
+#SBATCH --qos=default
+#SBATCH --gres=gpu:1
 
-python run_scDGN.py -dn pancreas1 -l 0.1 -m 1 -g 0 -adv 0 -o pancreas1_test_NN_2 --validation 0
+source /fs/classhomes/fall2020/cmsc828w/c828w073/miniconda3/bin/activate
+conda activate scDGN
 
-python run_scDGN.py -dn pancreas1 -l 0.1 -m 1 -g 0 -adv 0 -o pancreas1_test_NN_3 --validation 0
+python run_scDGN.py -dn pancreas0 -g 0 -adv 0 -o pancreas0_test_NN --validation 1 -i data_shuff/scDGN/ -c ckpts/NN
 
-python run_scDGN.py -dn pancreas1 -l 0.1 -m 1 -g 0 -adv 0 -o pancreas1_test_NN_4 --validation 0
+python run_scDGN.py -dn pancreas1 -g 0 -adv 0 -o pancreas1_test_NN --validation 1 -i data_shuff/scDGN/ -c ckpts/NN
 
-python run_scDGN.py -dn pancreas1 -l 0.1 -m 1 -g 0 -adv 0 -o pancreas1_test_NN_5 --validation 0
+python run_scDGN.py -dn pancreas2 -g 0 -adv 0 -o pancreas2_test_NN --validation 1 -i data_shuff/scDGN/ -c ckpts/NN
+
+python run_scDGN.py -dn pancreas3 -g 0 -adv 0 -o pancreas3_test_NN --validation 1 -i data_shuff/scDGN/ -c ckpts/NN
+
+python run_scDGN.py -dn pancreas4 -g 0 -adv 0 -o pancreas4_test_NN --validation 1 -i data_shuff/scDGN/ -c ckpts/NN
+
+python run_scDGN.py -dn pancreas5 -g 0 -adv 0 -o pancreas5_test_NN --validation 1 -i data_shuff/scDGN/ -c ckpts/NN
+
+python run_scDGN.py -dn pbmc -g 0 -adv 0 -o pbmc_test_NN --validation 1 -i data_shuff/scDGN/ -c ckpts/NN
 
 
 

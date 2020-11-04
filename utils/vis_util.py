@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+from torch.autograd import Variable
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
@@ -84,23 +85,45 @@ def plot_pca(representations, labels, domains, modelname, expname='scquery', nla
 
 
 # extract the representations from NN
-def extract_rep(t, d, scDGN=False):
+## type in ["test", "train", "valid", "all"]
+def extract_rep(t, d, type = "train"):
     representations = None
     labels = None
     domains = None
-    n_iter = len(d._train_y)//batch_size
+    batch_size=t.batch_size
+    
     t.D.eval()
     rng_state = np.random.get_state()
+    tr_set = d.train_set
+    test_set = d.test_set
+    if(type == "train"):
+        X = d._train_X
+        Y = d._train_y
+        Z = d._train_acc
+    elif(type == "valid"):
+        X = d._valid_X
+        Y = d._valid_y
+        Z = d._valid_acc
+    elif(type == "test"):
+        X = test_set["features"]
+        Y = test_set["labels"]
+        Z = test_set["accessions"]
+    else:
+        X = np.concatenate((tr_set["features"], test_set["features"]))
+        Y = np.concatenate((tr_set["features"], test_set["features"]))
+        Z = Y = np.concatenate((tr_set["accessions"], test_set["accessions"]))
+    
+    assert(Z.shape[0] == Y.shape[0])
+    assert(X.shape[0] == Y.shape[0])
+    n_iter = len(Y)//batch_size
     for i in range(n_iter):
-        x = d._train_X[i*batch_size:(i+1)*batch_size] 
-        y = d._train_y[i*batch_size:(i+1)*batch_size]
-        X = Variable(torch.cuda.FloatTensor(x))
-        if scDGN:
-            z = d._train_acc[i*batch_size:(i+1)*batch_size]
-            f_X = t.D(X, X, mode='eval')
-        else:
-            z = d._train_z[i*batch_size:(i+1)*batch_size]
-            f_X = t.D(X, mode='eval')
+        x = X[i*batch_size:(i+1)*batch_size] 
+        y = Y[i*batch_size:(i+1)*batch_size]
+        x = Variable(torch.cuda.FloatTensor(x))
+        
+        z = Z [i*batch_size:(i+1)*batch_size]
+        f_X = t.D(x, x, mode='eval')
+        
         if representations is None:
             representations = f_X.cpu().data.numpy()
             labels = y
@@ -111,16 +134,16 @@ def extract_rep(t, d, scDGN=False):
             domains = np.concatenate((domains, z), 0)
 
     # last batch
-    x = d._train_X[(i+1)*batch_size:] 
-    y = d._train_y[(i+1)*batch_size:]
-    X = Variable(torch.cuda.FloatTensor(x))
-    if scDGN:
-        z = d._train_acc[(i+1)*batch_size:]
-        f_X = t.D(X, X, mode='eval')
-    else:
-        z = d._train_z[(i+1)*batch_size:]
-        f_X = t.D(X, mode='eval')
+    x = X[(i+1)*batch_size:] 
+    y = Y[(i+1)*batch_size:]
+    x = Variable(torch.cuda.FloatTensor(x))
+    
+    z = Z[(i+1)*batch_size:]
+    f_X = t.D(x, x, mode='eval')
+    
     representations = np.concatenate((representations, f_X.cpu().data.numpy()), 0)
     labels = np.concatenate((labels, y), 0)
     domains = np.concatenate((domains, z), 0)
+    assert(representations.shape[0] == labels.shape[0])
+    assert(representations.shape[0] == domains.shape[0])
     return representations, labels, domains

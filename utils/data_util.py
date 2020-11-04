@@ -11,6 +11,7 @@ class dataset(object):
         self.dataset_name = dataset_name
         self.validation = validation
         self.init_dataset()
+        
     def init_dataset(self):
         print('loading dataset: %s'%self.dataset_name)
         if self.dataset_name == 'scquery':
@@ -48,6 +49,8 @@ class dataset(object):
             self._all_X = self.train_set['features']
             self._all_y = self.train_set['labels']
             self._all_acc = np.array([self.accessions_set.index(item) for item in list(self.train_set['accessions'])])
+            print(len(self._all_acc))
+            print(self.train_set['features'].shape)
             self._train_X = self._all_X[self.perm[:-self.n_valid]]
             self._valid_X = self._all_X[self.perm[-self.n_valid:]]
             self._train_acc = self._all_acc[self.perm[:-self.n_valid]]
